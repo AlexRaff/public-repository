@@ -11,58 +11,93 @@
 /**
  * Класс для работы с API
  *
- * @author		User Name
- * @version		v.1.0 (dd/mm/yyyy)
+ * @author		Alexander
+ * @version		v.1.0 (25/05/2025)
  */
 class Api
 {
-	public function __construct()
-	{
-	
-	}
+    /**
+     * Генерация массива подстановок вида "%key%" => value, для удобной замены в шаблонах
+     *
+     * @author		Alexander
+     * @version		v.1.0 (25/05/2025)
+     * @param       array $data
+     * @return      array
+     */
+    private function make_placeholders(array $data): array
+    {
+        static $cache = [];
 
+        $cache_key = md5(serialize($data));
 
-	/**
-	 * Заполняет строковый шаблон template данными из объекта object
-	 *
-	 * @author		User Name
-	 * @version		v.1.0 (dd/mm/yyyy)
-	 * @param		array $array
-	 * @param		string $template
-	 * @return		string
-	 */
-	public function get_api_path(array $array, string $template) : string
-	{
-		$result = '';
+        if (isset($cache[$cache_key])) {
+            return $cache[$cache_key];
+        }
 
-		/* Здесь ваш код */
+        $replacements = [];
+        foreach ($data as $key => $value) {
+            $replacements["%$key%"] = rawurlencode($this->normalize_value($value));
+        }
 
-		return $result;
-	}
+        return $cache[$cache_key] = $replacements;
+    }
+
+    /**
+     * Нормализует значение для подстановки в шаблон.
+     *
+     * @author		Alexander
+     * @version		v.1.0 (25/05/2025)
+     * @param       mixed $value
+     * @return      string
+     */
+    private function normalize_value(mixed $value): string
+    {
+        //В рамках задачи — простая реализация, но можно расширить
+        //под DateTime, массивы и прочие нестандартные поля
+        return (string) $value;
+    }
+
+    /**
+     * Заполняет строковый шаблон template данными из объекта object
+     *
+     * @author		Alexander
+     * @version		v.1.0 (25/05/2025)
+     * @param		array $data
+     * @param		string $template
+     * @return		string
+     */
+    public function get_api_path(array $data, string $template): string
+    {
+        return strtr($template, $this->make_placeholders($data));
+    }
 }
 
 $user =
-[
-	'id'		=> 20,
-	'name'		=> 'John Dow',
-	'role'		=> 'QA',
-	'salary'	=> 100
-];
+    [
+        'id'		=> 20,
+        'name'		=> 'John Dow',
+        'role'		=> 'QA',
+        'salary'	=> 100
+    ];
 
 $api_path_templates =
-[
-	"/api/items/%id%/%name%",
-	"/api/items/%id%/%role%",
-	"/api/items/%id%/%salary%"
-];
+    [
+        "/api/items/%id%/%name%",
+        "/api/items/%id%/%role%",
+        "/api/items/%id%/%salary%"
+    ];
 
 $api = new Api();
 
 $api_paths = array_map(function ($api_path_template) use ($api, $user)
 {
-	return $api->get_api_path($user, $api_path_template);
+    return $api->get_api_path($user, $api_path_template);
 }, $api_path_templates);
 
-echo json_encode($api_paths, JSON_FORCE_OBJECT | JSON_UNESCAPED_UNICODE););
+echo json_encode($api_paths, JSON_FORCE_OBJECT | JSON_UNESCAPED_UNICODE);
 
-$expected_result = ['/api/items/20/John%20Dow','/api/items/20/QA','/api/items/20/100'];
+$expected_result = ['/api/items/20/John%20Dow', '/api/items/20/QA', '/api/items/20/100'];
+
+$test_result_message = $api_paths === $expected_result ? "\033[32m✅ Тест завершен успешно!" : "\033[31m❌ Ошибка, данные не совпадают!";
+
+echo PHP_EOL . $test_result_message."\033[0m".PHP_EOL;
